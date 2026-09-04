@@ -18,9 +18,7 @@ import {
   IsIn,
 } from "class-validator";
 import { Type } from "class-transformer";
-import { Exclude, Expose } from "class-transformer";
-
-// -------- ENUMS --------
+import { Expose } from "class-transformer";
 
 export enum ProfileVisibility {
   PUBLIC = "public",
@@ -54,8 +52,6 @@ export enum ProfileCompletenessLevel {
   COMPLETE = "complete",
   FULL = "full",
 }
-
-// -------- INTERFACES --------
 
 export interface ProfilePrivacySettings {
   bio: ProfileVisibility;
@@ -141,18 +137,7 @@ export interface ProfileInterests {
   other?: string[];
 }
 
-export interface ProfileCustomFields {
-  [key: string]: any;
-}
-
-// -------- MAIN ENTITY --------
-
-/**
- * User Profile Entity representing extended user information.
- * This is a domain entity that extends the base User entity.
- */
 export class UserProfileEntity {
-  // -------- PRIMARY IDENTIFIERS --------
   @IsUUID()
   @Expose()
   id: string;
@@ -161,44 +146,41 @@ export class UserProfileEntity {
   @Expose()
   userId: string;
 
-  // -------- BASIC PROFILE --------
   @IsOptional()
   @IsString()
-  @MaxLength(500, { message: "Bio cannot exceed 500 characters" })
+  @MaxLength(500)
   @Expose()
   bio: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(100, { message: "Status cannot exceed 100 characters" })
+  @MaxLength(100)
   @Expose()
   status: string | null;
 
-  // -------- AVATAR --------
   @IsOptional()
-  @IsUrl({}, { message: "Invalid avatar URL format" })
+  @IsUrl()
   @Expose()
   avatarUrl: string | null;
 
   @IsOptional()
-  @IsUrl({}, { message: "Invalid thumbnail URL format" })
+  @IsUrl()
   @Expose()
   avatarThumb: string | null;
 
   @IsOptional()
-  @IsUrl({}, { message: "Invalid cover photo URL format" })
+  @IsUrl()
   @Expose()
   coverPhoto: string | null;
 
   @IsOptional()
-  @IsUrl({}, { message: "Invalid cover photo thumbnail URL format" })
+  @IsUrl()
   @Expose()
   coverPhotoThumb: string | null;
 
-  // -------- LOCATION --------
   @IsOptional()
   @IsString()
-  @MaxLength(100, { message: "Location cannot exceed 100 characters" })
+  @MaxLength(100)
   @Expose()
   location: string | null;
 
@@ -212,18 +194,16 @@ export class UserProfileEntity {
   @Expose()
   longitude: number | null;
 
-  // -------- CONTACT --------
   @IsOptional()
-  @IsUrl({}, { message: "Invalid website URL format" })
+  @IsUrl()
   @Expose()
   website: string | null;
 
   @IsOptional()
-  @IsString()
+  @IsEmail()
   @Expose()
   businessEmail: string | null;
 
-  // -------- PERSONAL --------
   @IsOptional()
   @IsDate()
   @Type(() => Date)
@@ -240,68 +220,60 @@ export class UserProfileEntity {
   @Expose()
   relationshipStatus: RelationshipStatus | null;
 
-  // -------- LANGUAGE & REGION --------
   @IsOptional()
   @IsString()
-  @MaxLength(10, { message: "Language code cannot exceed 10 characters" })
+  @MaxLength(10)
   @Expose()
   language: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(50, { message: "Timezone cannot exceed 50 characters" })
+  @MaxLength(50)
   @Expose()
   timezone: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(10, { message: "Country code cannot exceed 10 characters" })
+  @MaxLength(10)
   @Expose()
   countryCode: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(100, { message: "Region cannot exceed 100 characters" })
+  @MaxLength(100)
   @Expose()
   region: string | null;
 
-  // -------- SOCIAL LINKS --------
   @IsOptional()
   @IsObject()
   @Expose()
   socialLinks: ProfileSocialLinks | null;
 
-  // -------- WORK & EDUCATION --------
   @IsOptional()
   @IsObject()
   @Expose()
   workInfo: ProfileWorkInfo | null;
 
-  // -------- INTERESTS --------
   @IsOptional()
   @IsObject()
   @Expose()
   interests: ProfileInterests | null;
 
-  // -------- PRIVACY SETTINGS --------
   @IsOptional()
   @IsObject()
   @Expose()
   privacySettings: ProfilePrivacySettings | null;
 
-  // -------- CUSTOM FIELDS --------
   @IsOptional()
   @IsObject()
   @Expose()
-  customFields: ProfileCustomFields | null;
+  customFields: Record<string, any> | null;
 
-  // -------- METADATA --------
   @IsOptional()
   @IsObject()
   @Expose()
   metadata: Record<string, any> | null;
 
-  // -------- TIMESTAMPS --------
   @IsDate()
   @Expose()
   createdAt: Date;
@@ -325,7 +297,6 @@ export class UserProfileEntity {
   @Expose()
   coverPhotoUpdatedAt: Date | null;
 
-  // -------- COMPLETENESS --------
   @IsOptional()
   @IsInt()
   @Expose()
@@ -336,10 +307,8 @@ export class UserProfileEntity {
   @Expose()
   completenessLevel: ProfileCompletenessLevel;
 
-  // -------- CONSTRUCTOR --------
   constructor(partial: Partial<UserProfileEntity> = {}) {
     Object.assign(this, partial);
-    // Initialize default values
     if (!this.privacySettings) {
       this.privacySettings = this.getDefaultPrivacySettings();
     }
@@ -354,54 +323,31 @@ export class UserProfileEntity {
     }
   }
 
-  // -------- DOMAIN LOGIC --------
-
-  /**
-   * Check if the profile has a bio.
-   */
   hasBio(): boolean {
     return !!this.bio && this.bio.trim().length > 0;
   }
 
-  /**
-   * Check if the profile has a status.
-   */
   hasStatus(): boolean {
     return !!this.status && this.status.trim().length > 0;
   }
 
-  /**
-   * Check if the profile has an avatar.
-   */
   hasAvatar(): boolean {
     return !!this.avatarUrl;
   }
 
-  /**
-   * Check if the profile has a cover photo.
-   */
   hasCoverPhoto(): boolean {
     return !!this.coverPhoto;
   }
 
-  /**
-   * Check if the profile has a location.
-   */
   hasLocation(): boolean {
     return !!this.location || (!!this.latitude && !!this.longitude);
   }
 
-  /**
-   * Check if the profile has social links.
-   */
   hasSocialLinks(): boolean {
     if (!this.socialLinks) return false;
     return Object.values(this.socialLinks).some((value) => !!value);
   }
 
-  /**
-   * Check if the profile has work information.
-   */
   hasWorkInfo(): boolean {
     return (
       !!this.workInfo &&
@@ -412,9 +358,6 @@ export class UserProfileEntity {
     );
   }
 
-  /**
-   * Check if the profile has interests.
-   */
   hasInterests(): boolean {
     if (!this.interests) return false;
     return Object.values(this.interests).some(
@@ -422,12 +365,8 @@ export class UserProfileEntity {
     );
   }
 
-  /**
-   * Get the user's full profile as a formatted string.
-   */
   getFormattedProfile(): string {
     const parts: string[] = [];
-
     if (this.bio) parts.push(`📝 Bio: ${this.bio}`);
     if (this.status) parts.push(`📌 Status: ${this.status}`);
     if (this.location) parts.push(`📍 Location: ${this.location}`);
@@ -443,8 +382,6 @@ export class UserProfileEntity {
     if (this.timezone) parts.push(`🕐 Timezone: ${this.timezone}`);
     if (this.countryCode) parts.push(`🏳️ Country: ${this.countryCode}`);
     if (this.region) parts.push(`🏘️ Region: ${this.region}`);
-
-    // Social links
     if (this.socialLinks) {
       const activeLinks = Object.entries(this.socialLinks)
         .filter(([_, url]) => url)
@@ -453,8 +390,6 @@ export class UserProfileEntity {
         parts.push(...activeLinks);
       }
     }
-
-    // Work info
     if (this.workInfo) {
       if (this.workInfo.title && this.workInfo.company) {
         parts.push(`💼 ${this.workInfo.title} at ${this.workInfo.company}`);
@@ -479,8 +414,6 @@ export class UserProfileEntity {
         parts.push(`🗣️ Languages: ${langs}`);
       }
     }
-
-    // Interests
     if (this.interests) {
       const interestLabels: Record<string, string> = {
         hobbies: "🎯 Hobbies",
@@ -503,7 +436,6 @@ export class UserProfileEntity {
         learning: "📖 Learning",
         other: "📌 Other",
       };
-
       for (const [key, label] of Object.entries(interestLabels)) {
         const value = (this.interests as any)[key];
         if (Array.isArray(value) && value.length > 0) {
@@ -511,52 +443,29 @@ export class UserProfileEntity {
         }
       }
     }
-
     return parts.join("\n");
   }
 
-  /**
-   * Get the user's avatar URL with a fallback.
-   */
   getAvatarUrl(fallback: string = ""): string {
     return this.avatarUrl || fallback;
   }
 
-  /**
-   * Get the user's avatar thumbnail URL with a fallback.
-   */
   getAvatarThumb(fallback: string = ""): string {
     return this.avatarThumb || this.avatarUrl || fallback;
   }
 
-  /**
-   * Get the user's cover photo URL with a fallback.
-   */
   getCoverPhoto(fallback: string = ""): string {
     return this.coverPhoto || fallback;
   }
 
-  /**
-   * Get the user's cover photo thumbnail URL with a fallback.
-   */
   getCoverPhotoThumb(fallback: string = ""): string {
     return this.coverPhotoThumb || this.coverPhoto || fallback;
   }
 
-  /**
-   * Get the user's full name or display name from the profile.
-   * If not available, returns the username or email.
-   */
   getDisplayName(): string {
-    // If the profile has a name field, return it
-    // We'll use the user's display name from the user entity
-    // This should be set by the user entity
     return this.metadata?.displayName || "User";
   }
 
-  /**
-   * Get the user's initials (for avatar fallback).
-   */
   getInitials(): string {
     const name = this.getDisplayName();
     if (!name || name === "User") return "U";
@@ -569,9 +478,6 @@ export class UserProfileEntity {
     ).toUpperCase();
   }
 
-  /**
-   * Get the user's age based on birthday.
-   */
   getAge(): number | null {
     if (!this.birthday) return null;
     const now = new Date();
@@ -580,25 +486,18 @@ export class UserProfileEntity {
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   }
 
-  /**
-   * Get the user's age in years and months.
-   */
   getAgeFormatted(): string | null {
     const age = this.getAge();
     if (!age) return null;
-
     const now = new Date();
     const months =
       (now.getFullYear() - this.birthday!.getFullYear()) * 12 +
       (now.getMonth() - this.birthday!.getMonth());
-
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
-
     if (years === 0) {
       return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
     }
-
     const yearStr = `${years} year${years !== 1 ? "s" : ""}`;
     if (remainingMonths === 0) {
       return yearStr;
@@ -606,9 +505,6 @@ export class UserProfileEntity {
     return `${yearStr} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
   }
 
-  /**
-   * Check if the profile is public.
-   */
   isPublic(): boolean {
     return (
       !!this.privacySettings &&
@@ -618,16 +514,12 @@ export class UserProfileEntity {
     );
   }
 
-  /**
-   * Check if a specific field is visible to the viewer.
-   */
   isFieldVisible(
     field: keyof ProfilePrivacySettings,
     viewerRelation: "self" | "contact" | "public",
   ): boolean {
     if (!this.privacySettings) return true;
     const visibility = this.privacySettings[field] || ProfileVisibility.PUBLIC;
-
     if (viewerRelation === "self") return true;
     if (visibility === ProfileVisibility.PUBLIC) return true;
     if (
@@ -638,14 +530,10 @@ export class UserProfileEntity {
     return false;
   }
 
-  /**
-   * Get visible fields for a given viewer.
-   */
   getVisibleFields(
     viewerRelation: "self" | "contact" | "public",
   ): Partial<UserProfileEntity> {
     const visible: Partial<UserProfileEntity> = {};
-
     const fields: (keyof ProfilePrivacySettings)[] = [
       "bio",
       "status",
@@ -661,8 +549,6 @@ export class UserProfileEntity {
       "lastSeen",
       "onlineStatus",
     ];
-
-    // Map privacy fields to entity properties
     const fieldMap: Record<
       keyof ProfilePrivacySettings,
       keyof UserProfileEntity
@@ -681,26 +567,19 @@ export class UserProfileEntity {
       lastSeen: "lastSeen",
       onlineStatus: "onlineStatus",
     };
-
     for (const field of fields) {
       const entityField = fieldMap[field];
       if (this.isFieldVisible(field, viewerRelation)) {
         (visible as any)[entityField] = (this as any)[entityField];
       }
     }
-
-    // Always include public fields
     visible.id = this.id;
     visible.userId = this.userId;
     visible.createdAt = this.createdAt;
     visible.updatedAt = this.updatedAt;
-
     return visible;
   }
 
-  /**
-   * Get the default privacy settings.
-   */
   getDefaultPrivacySettings(): ProfilePrivacySettings {
     return {
       bio: ProfileVisibility.PUBLIC,
@@ -719,9 +598,6 @@ export class UserProfileEntity {
     };
   }
 
-  /**
-   * Update the privacy settings.
-   */
   updatePrivacySettings(settings: Partial<ProfilePrivacySettings>): void {
     this.privacySettings = {
       ...this.privacySettings,
@@ -730,9 +606,6 @@ export class UserProfileEntity {
     this.updatedAt = new Date();
   }
 
-  /**
-   * Calculate the profile completeness score (0-100).
-   */
   calculateCompleteness(): {
     score: number;
     level: ProfileCompletenessLevel;
@@ -768,11 +641,9 @@ export class UserProfileEntity {
         { name: "workInfo", weight: 10, hasValue: () => this.hasWorkInfo() },
         { name: "interests", weight: 10, hasValue: () => this.hasInterests() },
       ];
-
     let totalWeight = 0;
     let earnedWeight = 0;
     const missing: string[] = [];
-
     for (const field of fields) {
       totalWeight += field.weight;
       if (field.hasValue()) {
@@ -781,21 +652,15 @@ export class UserProfileEntity {
         missing.push(field.name);
       }
     }
-
     const score = Math.round((earnedWeight / totalWeight) * 100);
     let level: ProfileCompletenessLevel;
-
     if (score >= 90) level = ProfileCompletenessLevel.FULL;
     else if (score >= 70) level = ProfileCompletenessLevel.COMPLETE;
     else if (score >= 40) level = ProfileCompletenessLevel.PARTIAL;
     else level = ProfileCompletenessLevel.INCOMPLETE;
-
     return { score, level, missing };
   }
 
-  /**
-   * Update the completeness score and level.
-   */
   updateCompleteness(): void {
     const { score, level } = this.calculateCompleteness();
     this.completenessScore = score;
@@ -803,35 +668,23 @@ export class UserProfileEntity {
     this.updatedAt = new Date();
   }
 
-  /**
-   * Get the next fields to fill for better completeness.
-   */
   getNextFieldsToFill(): string[] {
     const { missing } = this.calculateCompleteness();
     return missing;
   }
 
-  /**
-   * Update the bio.
-   */
   updateBio(bio: string): void {
     this.bio = bio.trim();
     this.updatedAt = new Date();
     this.updateCompleteness();
   }
 
-  /**
-   * Update the status.
-   */
   updateStatus(status: string): void {
     this.status = status.trim();
     this.updatedAt = new Date();
     this.updateCompleteness();
   }
 
-  /**
-   * Update the avatar.
-   */
   updateAvatar(url: string, thumb?: string): void {
     this.avatarUrl = url;
     this.avatarThumb = thumb || url;
@@ -840,9 +693,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Remove the avatar.
-   */
   removeAvatar(): void {
     this.avatarUrl = null;
     this.avatarThumb = null;
@@ -851,9 +701,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Update the cover photo.
-   */
   updateCoverPhoto(url: string, thumb?: string): void {
     this.coverPhoto = url;
     this.coverPhotoThumb = thumb || url;
@@ -862,9 +709,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Remove the cover photo.
-   */
   removeCoverPhoto(): void {
     this.coverPhoto = null;
     this.coverPhotoThumb = null;
@@ -873,9 +717,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Update social links.
-   */
   updateSocialLinks(links: Partial<ProfileSocialLinks>): void {
     this.socialLinks = {
       ...this.socialLinks,
@@ -885,9 +726,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Update work information.
-   */
   updateWorkInfo(workInfo: Partial<ProfileWorkInfo>): void {
     this.workInfo = {
       ...this.workInfo,
@@ -897,9 +735,6 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Update interests.
-   */
   updateInterests(interests: Partial<ProfileInterests>): void {
     this.interests = {
       ...this.interests,
@@ -909,18 +744,12 @@ export class UserProfileEntity {
     this.updateCompleteness();
   }
 
-  /**
-   * Add a custom field.
-   */
   addCustomField(key: string, value: any): void {
     if (!this.customFields) this.customFields = {};
     this.customFields[key] = value;
     this.updatedAt = new Date();
   }
 
-  /**
-   * Remove a custom field.
-   */
   removeCustomField(key: string): void {
     if (this.customFields) {
       delete this.customFields[key];
@@ -928,19 +757,11 @@ export class UserProfileEntity {
     this.updatedAt = new Date();
   }
 
-  /**
-   * Get a custom field.
-   */
   getCustomField<T = any>(key: string): T | undefined {
     if (!this.customFields) return undefined;
     return this.customFields[key] as T;
   }
 
-  // -------- SERIALIZATION --------
-
-  /**
-   * Serialize the profile for API responses.
-   */
   toResponse(): Partial<UserProfileEntity> {
     return {
       id: this.id,
@@ -977,9 +798,6 @@ export class UserProfileEntity {
     };
   }
 
-  /**
-   * Serialize the profile for public viewing (limited fields).
-   */
   toPublicResponse(): Partial<UserProfileEntity> {
     return {
       id: this.id,
@@ -999,9 +817,6 @@ export class UserProfileEntity {
     };
   }
 
-  /**
-   * Serialize the profile for contacts (medium detail).
-   */
   toContactResponse(): Partial<UserProfileEntity> {
     return {
       id: this.id,
@@ -1024,9 +839,6 @@ export class UserProfileEntity {
     };
   }
 
-  /**
-   * Serialize the profile for admin (full detail).
-   */
   toAdminResponse(): Partial<UserProfileEntity> {
     return {
       ...this.toResponse(),
@@ -1035,20 +847,11 @@ export class UserProfileEntity {
     };
   }
 
-  /**
-   * Create a safe copy of the profile without sensitive data.
-   */
   toSafeCopy(): UserProfileEntity {
     const safe = new UserProfileEntity({ ...this });
-    // Remove any sensitive data if needed
     return safe;
   }
 
-  // -------- STATIC HELPERS --------
-
-  /**
-   * Create a new profile with default values.
-   */
   static createNew(userId: string): UserProfileEntity {
     const profile = new UserProfileEntity();
     profile.id = crypto.randomUUID
@@ -1089,40 +892,21 @@ export class UserProfileEntity {
     return profile;
   }
 
-  /**
-   * Validate that the profile entity is valid.
-   */
   validate(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-
-    if (!this.userId) {
-      errors.push("User ID is required");
-    }
-
-    if (this.bio && this.bio.length > 500) {
+    if (!this.userId) errors.push("User ID is required");
+    if (this.bio && this.bio.length > 500)
       errors.push("Bio cannot exceed 500 characters");
-    }
-
-    if (this.status && this.status.length > 100) {
+    if (this.status && this.status.length > 100)
       errors.push("Status cannot exceed 100 characters");
-    }
-
-    if (this.avatarUrl && !this.isValidUrl(this.avatarUrl)) {
+    if (this.avatarUrl && !this.isValidUrl(this.avatarUrl))
       errors.push("Avatar URL is invalid");
-    }
-
-    if (this.coverPhoto && !this.isValidUrl(this.coverPhoto)) {
+    if (this.coverPhoto && !this.isValidUrl(this.coverPhoto))
       errors.push("Cover photo URL is invalid");
-    }
-
-    if (this.website && !this.isValidUrl(this.website)) {
+    if (this.website && !this.isValidUrl(this.website))
       errors.push("Website URL is invalid");
-    }
-
-    if (this.businessEmail && !this.isValidEmail(this.businessEmail)) {
+    if (this.businessEmail && !this.isValidEmail(this.businessEmail))
       errors.push("Business email is invalid");
-    }
-
     if (
       this.latitude !== null &&
       this.latitude !== undefined &&
@@ -1130,7 +914,6 @@ export class UserProfileEntity {
     ) {
       errors.push("Latitude must be between -90 and 90");
     }
-
     if (
       this.longitude !== null &&
       this.longitude !== undefined &&
@@ -1138,16 +921,9 @@ export class UserProfileEntity {
     ) {
       errors.push("Longitude must be between -180 and 180");
     }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return { valid: errors.length === 0, errors };
   }
 
-  /**
-   * Create a profile from a Prisma user profile object.
-   */
   static fromPrisma(prismaProfile: any): UserProfileEntity {
     return new UserProfileEntity({
       id: prismaProfile.id,
@@ -1187,8 +963,6 @@ export class UserProfileEntity {
     });
   }
 
-  // -------- PRIVATE HELPERS --------
-
   private isValidUrl(url: string): boolean {
     try {
       new URL(url);
@@ -1202,8 +976,4 @@ export class UserProfileEntity {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   }
-
-  // -------- END --------
 }
-
-// -------- END --------
