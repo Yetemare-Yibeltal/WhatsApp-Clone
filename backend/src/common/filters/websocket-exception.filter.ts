@@ -18,7 +18,6 @@ import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { ConfigService } from "@nestjs/config";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 
-// -------- INTERFACES --------
 export interface WsErrorResponse {
   event: "error";
   error: {
@@ -69,7 +68,7 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     string,
     { count: number; lastLogTime: number }
   >();
-  private readonly rateLimitWindow = 60000; // 1 minute
+  private readonly rateLimitWindow = 60000;
 
   constructor(
     private readonly configService: ConfigService,
@@ -84,19 +83,14 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       this.configService.get("WS_DISCONNECT_ON_CRITICAL_ERROR") !== "false";
   }
 
-  // ---------------------- MAIN CATCH HANDLER ----------------------
   catch(exception: unknown, host: ArgumentsHost): void {
     const client = host.switchToWs().getClient<Socket>();
     const context = host.switchToWs().getData();
     const event = host.switchToWs().getPattern();
 
-    // Build metadata for logging
     const metadata = this.buildMetadata(client, event, context);
-
-    // ---- 1. Classify the exception ----
     const errorResponse = this.classifyException(exception, metadata);
 
-    // ---- 2. Rate‑limited logging ----
     const shouldLog = this.shouldLogError(
       errorResponse.error.code,
       event,
@@ -106,7 +100,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       this.logError(exception, errorResponse, metadata);
     }
 
-    // ---- 3. Emit event for monitoring ----
     if (this.eventEmitter && errorResponse.error.statusCode >= 500) {
       this.eventEmitter.emit("ws.error.critical", {
         error: errorResponse,
@@ -116,18 +109,11 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       });
     }
 
-    // ---- 4. Send error response to client ----
     try {
-      // Add requestId to client's error response
-      if (errorResponse.error) {
-        errorResponse.error.requestId = metadata.clientId;
-        errorResponse.error.timestamp = new Date().toISOString();
-      }
+      errorResponse.error.requestId = metadata.clientId;
+      errorResponse.error.timestamp = new Date().toISOString();
 
-      // Emit the error event to the client
       client.emit("error", errorResponse);
-
-      // Also emit specific error event for better client handling
       client.emit("ws:error", {
         code: errorResponse.error.code,
         message: errorResponse.error.message,
@@ -136,7 +122,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
         requestId: errorResponse.error.requestId,
       });
 
-      // ---- 5. Disconnect on critical errors if configured ----
       if (
         this.disconnectOnCriticalErrors &&
         errorResponse.error.statusCode >= 500
@@ -147,31 +132,24 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
         client.disconnect();
       }
     } catch (error) {
-      // If we can't send the error, log it and disconnect
       this.logger.error(
         `Failed to send error response to client ${metadata.clientId}: ${error.message}`,
       );
       try {
         client.disconnect();
-      } catch (_) {
-        // Ignore disconnect errors
-      }
+      } catch (_) {}
     }
   }
 
-  // ---------------------- EXCEPTION CLASSIFICATION ----------------------
   private classifyException(
     exception: unknown,
     metadata: WsErrorMetadata,
   ): WsErrorResponse {
     const now = new Date().toISOString();
 
-    // ---- Handle WsException ----
     if (exception instanceof WsException) {
       const message = exception.message || "WebSocket error";
       const errorCode = this.getErrorCodeFromMessage(message);
-
-      // Check if it's a validation error with details
       if (typeof exception.getError() === "object") {
         const errorObj = exception.getError() as any;
         if (errorObj.details && errorObj.details.validationErrors) {
@@ -197,19 +175,16 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
           },
         };
       }
-
-      // Extract details from WsException if they exist
       let details: Record<string, any> | undefined;
       if (typeof exception.getError() === "object") {
         const errorObj = exception.getError() as any;
         details = errorObj.details || errorObj;
       }
-
       return {
         event: "error",
         error: {
           code: errorCode || "WS_ERROR",
-          message: message,
+          message,
           details,
           timestamp: now,
           statusCode: 400,
@@ -217,7 +192,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle UnauthorizedException ----
     if (exception instanceof UnauthorizedException) {
       const response = exception.getResponse() as any;
       return {
@@ -229,14 +203,10 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
           timestamp: now,
           statusCode: 401,
         },
-        reconnection: {
-          recommended: true,
-          delayMs: 1000,
-        },
+        reconnection: { recommended: true, delayMs: 1000 },
       };
     }
 
-    // ---- Handle ForbiddenException ----
     if (exception instanceof ForbiddenException) {
       const response = exception.getResponse() as any;
       return {
@@ -248,21 +218,15 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
           timestamp: now,
           statusCode: 403,
         },
-        reconnection: {
-          recommended: false,
-        },
+        reconnection: { recommended: false },
       };
     }
 
-    // ---- Handle BadRequestException ----
     if (exception instanceof BadRequestException) {
       const response = exception.getResponse() as any;
       let details: Record<string, any> | undefined;
-
-      // If it's a validation error with field details
       if (response.message && Array.isArray(response.message)) {
         const validationErrors: Record<string, string[]> = {};
-        // Try to parse validation errors
         for (const msg of response.message) {
           if (typeof msg === "string" && msg.includes(" ")) {
             const field = msg.split(" ")[0];
@@ -270,14 +234,10 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
             validationErrors[field].push(msg);
           }
         }
-        details = {
-          validationErrors: validationErrors,
-          rawErrors: response.message,
-        };
+        details = { validationErrors, rawErrors: response.message };
       } else if (response.details) {
         details = response.details;
       }
-
       return {
         event: "error",
         error: {
@@ -290,7 +250,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle NotFoundException ----
     if (exception instanceof NotFoundException) {
       const response = exception.getResponse() as any;
       return {
@@ -305,7 +264,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle ConflictException ----
     if (exception instanceof ConflictException) {
       const response = exception.getResponse() as any;
       return {
@@ -320,7 +278,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle HttpException (generic) ----
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
       const response = exception.getResponse() as any;
@@ -337,7 +294,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
         503: "SERVICE_UNAVAILABLE",
         504: "GATEWAY_TIMEOUT",
       };
-
       return {
         event: "error",
         error: {
@@ -354,7 +310,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle Prisma errors ----
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       return this.handlePrismaError(exception, now);
     }
@@ -376,7 +331,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle JWT errors ----
     if (exception instanceof TokenExpiredError) {
       return {
         event: "error",
@@ -386,10 +340,7 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
           timestamp: now,
           statusCode: 401,
         },
-        reconnection: {
-          recommended: true,
-          delayMs: 1000,
-        },
+        reconnection: { recommended: true, delayMs: 1000 },
       };
     }
 
@@ -405,16 +356,11 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       };
     }
 
-    // ---- Handle generic Error ----
     if (exception instanceof Error) {
-      // Check if it's a known error type we should handle differently
       const errorCode = this.getErrorCodeFromMessage(exception.message);
-
-      // Don't expose internal error details in production
       const message = this.isDevelopment
         ? exception.message
         : "An unexpected error occurred";
-
       return {
         event: "error",
         error: {
@@ -422,21 +368,15 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
           message,
           details:
             this.isDevelopment && exception.stack
-              ? {
-                  stack: exception.stack,
-                }
+              ? { stack: exception.stack }
               : undefined,
           timestamp: now,
           statusCode: 500,
         },
-        reconnection: {
-          recommended: true,
-          delayMs: 2000,
-        },
+        reconnection: { recommended: true, delayMs: 2000 },
       };
     }
 
-    // ---- Unknown exception type ----
     return {
       event: "error",
       error: {
@@ -447,14 +387,10 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
         timestamp: now,
         statusCode: 500,
       },
-      reconnection: {
-        recommended: true,
-        delayMs: 2000,
-      },
+      reconnection: { recommended: true, delayMs: 2000 },
     };
   }
 
-  // ---------------------- PRISMA ERROR HANDLER ----------------------
   private handlePrismaError(
     exception: Prisma.PrismaClientKnownRequestError,
     timestamp: string,
@@ -467,10 +403,7 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
         timestamp,
         statusCode: 500,
       },
-      reconnection: {
-        recommended: true,
-        delayMs: 2000,
-      },
+      reconnection: { recommended: true, delayMs: 2000 },
     };
 
     switch (exception.code) {
@@ -534,10 +467,7 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
             message: "Database connection error",
             statusCode: 503,
           },
-          reconnection: {
-            recommended: true,
-            delayMs: 5000,
-          },
+          reconnection: { recommended: true, delayMs: 5000 },
         };
       }
       default: {
@@ -548,7 +478,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
               message: exception.message,
             }
           : undefined;
-
         return {
           ...baseResponse,
           error: {
@@ -561,7 +490,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     }
   }
 
-  // ---------------------- HELPER: BUILD METADATA ----------------------
   private buildMetadata(
     client: Socket,
     event: string | undefined,
@@ -569,8 +497,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
   ): WsErrorMetadata {
     const handshake = client.handshake;
     const user = client.data?.user;
-
-    // Get client IP
     let ip = "0.0.0.0";
     const forwarded = handshake.headers["x-forwarded-for"];
     if (forwarded) {
@@ -583,20 +509,14 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     } else if (handshake.address) {
       ip = handshake.address;
     }
-
     const userAgent = handshake.headers["user-agent"] || "unknown";
-
-    // Get rooms the client is in
     let rooms: string[] = [];
     try {
       const socketRooms = client.rooms || new Set();
       rooms = Array.from(socketRooms).filter(
         (r) => r !== client.id,
       ) as string[];
-    } catch (_) {
-      // ignore
-    }
-
+    } catch (_) {}
     return {
       clientId: client.id,
       room: rooms.length > 0 ? rooms : undefined,
@@ -608,7 +528,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     };
   }
 
-  // ---------------------- HELPER: GET ERROR CODE FROM MESSAGE ----------------------
   private getErrorCodeFromMessage(message: string): string {
     const patterns: Record<string, RegExp> = {
       AUTH_UNAUTHORIZED: /unauthorized|unauthenticated|login|auth required/i,
@@ -621,58 +540,40 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       TIMEOUT: /timeout|timed out|time out/i,
       INTERNAL_SERVER_ERROR: /server error|internal|unexpected error/i,
     };
-
     for (const [code, pattern] of Object.entries(patterns)) {
-      if (pattern.test(message)) {
-        return code;
-      }
+      if (pattern.test(message)) return code;
     }
-
     return "UNKNOWN_ERROR";
   }
 
-  // ---------------------- HELPER: RATE‑LIMITED LOGGING ----------------------
   private shouldLogError(
     errorCode: string,
     event: string | undefined,
     userId: string | undefined,
   ): boolean {
-    // Always log 500 errors
     if (
       errorCode === "INTERNAL_SERVER_ERROR" ||
       errorCode === "DB_CONNECTION_ERROR"
-    ) {
+    )
       return true;
-    }
-
-    // Sample other errors
-    if (this.logSampleRate < 1.0 && Math.random() > this.logSampleRate) {
+    if (this.logSampleRate < 1.0 && Math.random() > this.logSampleRate)
       return false;
-    }
-
-    // Rate limit by key
     const key = `${errorCode}:${event || "unknown"}:${userId || "anonymous"}`;
     const now = Date.now();
     const entry = this.logCounter.get(key);
-
     if (!entry) {
       this.logCounter.set(key, { count: 1, lastLogTime: now });
       return true;
     }
-
     if (now - entry.lastLogTime > this.rateLimitWindow) {
       this.logCounter.set(key, { count: 1, lastLogTime: now });
       return true;
     }
-
     entry.count++;
-    if (entry.count % 10 === 0) {
-      return true; // log every 10th occurrence
-    }
+    if (entry.count % 10 === 0) return true;
     return false;
   }
 
-  // ---------------------- HELPER: LOG ERROR ----------------------
   private logError(
     exception: unknown,
     errorResponse: WsErrorResponse,
@@ -690,7 +591,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       errorMessage: errorResponse.error.message,
       timestamp: errorResponse.error.timestamp,
     };
-
     if (errorResponse.error.statusCode >= 500) {
       const stack = exception instanceof Error ? exception.stack : undefined;
       this.logger.error(
@@ -711,10 +611,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     }
   }
 
-  // ---------------------- PUBLIC API: CUSTOM ERROR HELPERS ----------------------
-  /**
-   * Create a validation error response for WebSocket clients.
-   */
   static createValidationError(
     validationErrors: Record<string, string[]>,
     message: string = "Validation failed",
@@ -724,18 +620,13 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       error: {
         code: "VALIDATION_ERROR",
         message,
-        details: {
-          validationErrors,
-        },
+        details: { validationErrors },
         timestamp: new Date().toISOString(),
         statusCode: 400,
       },
     };
   }
 
-  /**
-   * Create a custom error response for WebSocket clients.
-   */
   static createError(
     code: string,
     message: string,
@@ -754,9 +645,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     };
   }
 
-  /**
-   * Check if an error is critical (needs disconnection).
-   */
   static isCriticalError(error: WsErrorResponse): boolean {
     const criticalCodes = [
       "AUTH_UNAUTHORIZED",
@@ -771,9 +659,6 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
     );
   }
 
-  /**
-   * Get a user-friendly error message for a client.
-   */
   static getClientFriendlyMessage(error: WsErrorResponse): string {
     const messages: Record<string, string> = {
       AUTH_UNAUTHORIZED: "Please log in to continue.",
@@ -790,11 +675,8 @@ export class WebsocketExceptionFilter extends BaseWsExceptionFilter {
       INTERNAL_SERVER_ERROR:
         "An unexpected error occurred. Please try again later.",
     };
-
     return (
       messages[error.error.code] || error.error.message || "An error occurred"
     );
   }
-
-  // ---------------------- END ----------------------
 }
