@@ -20,20 +20,8 @@ import { verify } from "jsonwebtoken";
 import { PrismaService } from "../../database/prisma/prisma.service";
 import { AuthUser } from "../decorators/current-user.decorator";
 
-// -------- METADATA KEYS --------
 export const WS_PUBLIC_KEY = "wsIsPublic";
 export const WS_OPTIONAL_AUTH_KEY = "wsIsOptional";
-
-/**
- * Mark a WebSocket gateway or handler as public (no authentication required).
- */
-export const WsPublic = () => SetMetadata(WS_PUBLIC_KEY, true);
-
-/**
- * Mark a WebSocket gateway or handler as optional authentication.
- * If token is present, user will be attached; otherwise, allow connection.
- */
-export const WsOptional = () => SetMetadata(WS_OPTIONAL_AUTH_KEY, true);
 
 export interface WsJwtPayload {
   sub: string;
@@ -60,7 +48,6 @@ export class WsJwtGuard implements CanActivate {
   private readonly tokenExtractors: Array<"query" | "headers" | "cookies">;
   private readonly jwtSecret: string;
 
-  // In-memory rate limit tracking (per IP per room)
   private rateLimits = new Map<string, { count: number; resetAt: number }>();
 
   constructor(
@@ -71,7 +58,7 @@ export class WsJwtGuard implements CanActivate {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     @Optional()
-    private readonly eventEmitter: EventEmitter2,
+    private readonly eventEmitter?: EventEmitter2,
   ) {
     this.jwtSecret = this.configService.get<string>("jwtSecret");
     if (!this.jwtSecret) {
@@ -107,20 +94,15 @@ export class WsJwtGuard implements CanActivate {
     });
   }
 
-  // ---------------------- MAIN GUARD LOGIC ----------------------
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // For WebSocket, the client is attached to the context
     const client: Socket = context.switchToWs().getClient();
     const handler = context.getHandler();
     const controller = context.getClass();
 
-    // ---- 1. Check if the handler/controller is marked as public ----
     const isPublic =
       this.reflector.get<boolean>(WS_PUBLIC_KEY, handler) ||
       this.reflector.get<boolean>(WS_PUBLIC_KEY, controller);
     if (isPublic) {
-      // Allow connection without authentication
-      // But still attempt to extract token for optional user attachment
       try {
         const token = this.extractToken(client);
         if (token) {
@@ -129,18 +111,14 @@ export class WsJwtGuard implements CanActivate {
             client.data.user = user;
           }
         }
-      } catch (_) {
-        // Ignore errors on public routes
-      }
+      } catch (_) {}
       return true;
     }
 
-    // ---- 2. Check if optional auth ----
     const isOptional =
       this.reflector.get<boolean>(WS_OPTIONAL_AUTH_KEY, handler) ||
       this.reflector.get<boolean>(WS_OPTIONAL_AUTH_KEY, controller);
     if (isOptional) {
-      // Attempt to authenticate, but allow if no token
       try {
         const token = this.extractToken(client);
         if (token) {
@@ -151,24 +129,20 @@ export class WsJwtGuard implements CanActivate {
         }
         return true;
       } catch (_) {
-        // If token is invalid but optional, we still allow
         return true;
       }
     }
 
-    // ---- 3. Required authentication ----
     const token = this.extractToken(client);
     if (!token) {
       this.logFailedAuth(client, "No token provided");
       throw new WsException("Authentication token required");
     }
 
-    // ---- 4. Rate limiting ----
     if (this.enableRateLimit) {
       await this.checkRateLimit(client);
     }
 
-    // ---- 5. Validate token and get user ----
     let user: AuthUser;
     try {
       user = await this.validateToken(token, client);
@@ -182,13 +156,11 @@ export class WsJwtGuard implements CanActivate {
       throw new WsException("User not found");
     }
 
-    // ---- 6. Check if user is active ----
     if (!user.isActive) {
       this.logFailedAuth(client, "User account suspended");
       throw new WsException("Account suspended");
     }
 
-    // ---- 7. Check token blacklist ----
     if (this.enableBlacklist) {
       const isBlacklisted = await this.isTokenBlacklisted(token, user.id);
       if (isBlacklisted) {
@@ -197,13 +169,9 @@ export class WsJwtGuard implements CanActivate {
       }
     }
 
-    // ---- 8. Attach user to socket ----
     client.data.user = user;
-
-    // ---- 9. Log successful connection ----
     this.logSuccessfulAuth(client, user);
 
-    // ---- 10. Emit event for analytics ----
     if (this.eventEmitter) {
       this.eventEmitter.emit("ws.authenticated", {
         userId: user.id,
@@ -218,21 +186,17 @@ export class WsJwtGuard implements CanActivate {
     return true;
   }
 
-  // ---------------------- TOKEN EXTRACTION ----------------------
   private extractToken(client: Socket): string | null {
     const handshake = client.handshake;
 
-    // Try each extractor in order
     for (const extractor of this.tokenExtractors) {
       let token: string | null = null;
 
       switch (extractor) {
         case "query":
-          // Extract from query string (e.g., ?token=xxx)
           token = (handshake.query?.token as string) || null;
           break;
         case "headers":
-          // Extract from Authorization header
           const authHeader = handshake.headers?.authorization;
           if (authHeader) {
             const parts = authHeader.split(" ");
@@ -242,7 +206,6 @@ export class WsJwtGuard implements CanActivate {
           }
           break;
         case "cookies":
-          // Extract from cookies (if cookie parser is used)
           const cookie = handshake.headers?.cookie;
           if (cookie) {
             const match = cookie.match(/token=([^;]+)/);
@@ -264,16 +227,13 @@ export class WsJwtGuard implements CanActivate {
     return null;
   }
 
-  // ---------------------- TOKEN VALIDATION ----------------------
   private async validateToken(
     token: string,
     client: Socket,
   ): Promise<AuthUser | null> {
     try {
-      // Verify JWT
       const payload = verify(token, this.jwtSecret) as WsJwtPayload;
 
-      // Check if user exists in DB
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
         include: { profile: true },
@@ -283,7 +243,6 @@ export class WsJwtGuard implements CanActivate {
         return null;
       }
 
-      // Remove sensitive fields
       const { passwordHash, ...safeUser } = user;
       return safeUser as AuthUser;
     } catch (error) {
@@ -297,12 +256,10 @@ export class WsJwtGuard implements CanActivate {
     }
   }
 
-  // ---------------------- RATE LIMITING ----------------------
   private async checkRateLimit(client: Socket): Promise<void> {
     const ip = this.getClientIp(client);
     const key = `ws:rate:${ip}`;
 
-    // Use in-memory cache first, then fallback to Redis if available
     if (this.cacheManager) {
       try {
         const current = (await this.cacheManager.get<number>(key)) || 0;
@@ -314,12 +271,9 @@ export class WsJwtGuard implements CanActivate {
         }
         await this.cacheManager.set(key, current + 1, this.rateLimitTtl);
         return;
-      } catch (_) {
-        // Fallback to in-memory if Redis fails
-      }
+      } catch (_) {}
     }
 
-    // In-memory fallback
     const now = Date.now();
     const entry = this.rateLimits.get(key);
     if (entry) {
@@ -331,7 +285,6 @@ export class WsJwtGuard implements CanActivate {
           );
         }
       } else {
-        // Reset window
         this.rateLimits.set(key, {
           count: 1,
           resetAt: now + this.rateLimitTtl * 1000,
@@ -345,7 +298,6 @@ export class WsJwtGuard implements CanActivate {
     }
   }
 
-  // ---------------------- TOKEN BLACKLIST ----------------------
   private async isTokenBlacklisted(
     token: string,
     userId: string,
@@ -356,16 +308,14 @@ export class WsJwtGuard implements CanActivate {
       const exists = await this.cacheManager.get(key);
       if (exists) return true;
 
-      // Also check per-user blacklist
       const userKey = `ws:blacklist:user:${userId}`;
       const tokens = (await this.cacheManager.get<string[]>(userKey)) || [];
       return tokens.includes(token);
     } catch (_) {
-      return false; // fail open
+      return false;
     }
   }
 
-  // ---------------------- GET CLIENT IP ----------------------
   private getClientIp(client: Socket): string {
     const handshake = client.handshake;
     const forwarded = handshake.headers["x-forwarded-for"];
@@ -380,14 +330,12 @@ export class WsJwtGuard implements CanActivate {
     return handshake.address || "0.0.0.0";
   }
 
-  // ---------------------- LOGGING HELPERS ----------------------
   private logFailedAuth(client: Socket, reason: string): void {
     const ip = this.getClientIp(client);
     const ua = client.handshake.headers["user-agent"] || "unknown";
     this.logger.warn(
       `WebSocket auth failed | Client: ${client.id} | IP: ${ip} | UA: ${ua} | Reason: ${reason}`,
     );
-    // Emit event for security monitoring
     if (this.eventEmitter) {
       this.eventEmitter.emit("ws.auth.failed", {
         clientId: client.id,
@@ -405,10 +353,6 @@ export class WsJwtGuard implements CanActivate {
     );
   }
 
-  // ---------------------- PUBLIC API: REVOKE TOKENS ----------------------
-  /**
-   * Revoke a specific token for WebSocket connections.
-   */
   async revokeToken(
     token: string,
     userId: string,
@@ -418,7 +362,6 @@ export class WsJwtGuard implements CanActivate {
     try {
       const key = `ws:blacklist:${token}`;
       await this.cacheManager.set(key, true, ttl);
-      // Add to user-specific list
       const userKey = `ws:blacklist:user:${userId}`;
       const existing = (await this.cacheManager.get<string[]>(userKey)) || [];
       if (!existing.includes(token)) {
@@ -431,9 +374,6 @@ export class WsJwtGuard implements CanActivate {
     }
   }
 
-  /**
-   * Revoke all WebSocket tokens for a user.
-   */
   async revokeAllTokens(userId: string): Promise<void> {
     if (!this.cacheManager) return;
     try {
@@ -445,14 +385,7 @@ export class WsJwtGuard implements CanActivate {
     }
   }
 
-  // ---------------------- PUBLIC API: GET CONNECTION STATS ----------------------
-  /**
-   * Get the number of active WebSocket connections (if tracking is implemented).
-   */
   getActiveConnections(): number {
-    // Placeholder – in production, you'd track connections in a global store.
     return 0;
   }
-
-  // ---------------------- END ----------------------
 }
