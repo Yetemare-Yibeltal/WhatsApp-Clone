@@ -20,18 +20,9 @@ import {
   IsUrl,
   IsUUID,
   IsDateString,
-  IsMongoId,
 } from "class-validator";
-import {
-  Transform,
-  Type,
-  Expose,
-  Exclude,
-  plainToClass,
-} from "class-transformer";
+import { Transform, Type, Exclude, plainToClass } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-
-// -------- ENUMS --------
 
 export enum UserStatusType {
   ONLINE = "online",
@@ -52,7 +43,7 @@ export enum StatusVisibility {
   PUBLIC = "public",
   CONTACTS = "contacts",
   PRIVATE = "private",
-  CUSTOM = "custom", // specific users or groups
+  CUSTOM = "custom",
 }
 
 export enum StatusCategory {
@@ -73,14 +64,8 @@ export enum StatusExpiryAction {
   REPLACE = "replace",
 }
 
-// -------- NESTED DTOs --------
-
-/**
- * Status visibility settings.
- */
 export class StatusVisibilityDto {
   @ApiPropertyOptional({
-    description: "Visibility level",
     enum: StatusVisibility,
     default: StatusVisibility.PUBLIC,
   })
@@ -88,56 +73,37 @@ export class StatusVisibilityDto {
   @IsEnum(StatusVisibility)
   level?: StatusVisibility;
 
-  @ApiPropertyOptional({
-    description: "Specific user IDs for custom visibility",
-    example: ["user_1", "user_2"],
-  })
+  @ApiPropertyOptional({ example: ["user_1", "user_2"] })
   @IsOptional()
   @IsArray()
   @IsUUID(undefined, { each: true })
   userIds?: string[];
 
-  @ApiPropertyOptional({
-    description: "Specific group IDs for custom visibility",
-    example: ["group_1", "group_2"],
-  })
+  @ApiPropertyOptional({ example: ["group_1", "group_2"] })
   @IsOptional()
   @IsArray()
   @IsUUID(undefined, { each: true })
   groupIds?: string[];
 
-  @ApiPropertyOptional({
-    description: "Exclude these user IDs from visibility",
-    example: ["user_3", "user_4"],
-  })
+  @ApiPropertyOptional({ example: ["user_3"] })
   @IsOptional()
   @IsArray()
   @IsUUID(undefined, { each: true })
   excludeUserIds?: string[];
 }
 
-/**
- * Status scheduling information.
- */
 export class StatusScheduleDto {
-  @ApiPropertyOptional({
-    description: "Start time for the status (ISO 8601 datetime)",
-    example: "2024-01-15T10:00:00Z",
-  })
+  @ApiPropertyOptional({ example: "2024-01-15T10:00:00Z" })
   @IsOptional()
-  @IsDateString({}, { message: "Invalid start time format (use ISO 8601)" })
+  @IsDateString()
   startAt?: string;
 
-  @ApiPropertyOptional({
-    description: "End time for the status (ISO 8601 datetime)",
-    example: "2024-01-15T12:00:00Z",
-  })
+  @ApiPropertyOptional({ example: "2024-01-15T12:00:00Z" })
   @IsOptional()
-  @IsDateString({}, { message: "Invalid end time format (use ISO 8601)" })
+  @IsDateString()
   endAt?: string;
 
   @ApiPropertyOptional({
-    description: "Action to take when the status expires",
     enum: StatusExpiryAction,
     default: StatusExpiryAction.CLEAR,
   })
@@ -145,162 +111,68 @@ export class StatusScheduleDto {
   @IsEnum(StatusExpiryAction)
   expiryAction?: StatusExpiryAction;
 
-  @ApiPropertyOptional({
-    description: "If expiryAction is REPLACE, the status to replace with",
-  })
   @ValidateIf((o) => o.expiryAction === StatusExpiryAction.REPLACE)
   @IsOptional()
   @IsString()
   @MaxLength(100)
   replacementStatus?: string;
 
-  @ApiPropertyOptional({
-    description: "If expiryAction is REVERT, the previous status to revert to",
-  })
   @ValidateIf((o) => o.expiryAction === StatusExpiryAction.REVERT)
   @IsOptional()
   @IsString()
   @MaxLength(100)
   revertToStatus?: string;
 
-  @ApiPropertyOptional({
-    description: "Recurrence rule (RRULE) for recurring statuses",
-    example: "FREQ=DAILY;INTERVAL=1",
-  })
+  @ApiPropertyOptional({ example: "FREQ=DAILY;INTERVAL=1" })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   recurrence?: string;
 
-  @ApiPropertyOptional({
-    description: "Use all-day scheduling",
-    example: false,
-  })
+  @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
   allDay?: boolean;
 }
 
-/**
- * Status history entry (for response only).
- */
-export class StatusHistoryEntryDto {
-  @ApiProperty({ description: "History entry ID" })
-  @Expose()
-  @IsUUID()
-  id: string;
-
-  @ApiProperty({ description: "Status text" })
-  @Expose()
+export class UpdateStatusDto {
+  @ApiProperty({ description: "Status message", maxLength: 100 })
   @IsString()
+  @IsNotEmpty()
+  @MinLength(1)
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim() || "")
   status: string;
 
-  @ApiPropertyOptional({ description: "Status type" })
-  @Expose()
+  @ApiPropertyOptional({ enum: UserStatusType, default: UserStatusType.CUSTOM })
   @IsOptional()
   @IsEnum(UserStatusType)
   type?: UserStatusType;
 
-  @ApiPropertyOptional({ description: "Emoji" })
-  @Expose()
-  @IsOptional()
-  @IsString()
-  emoji?: string;
-
-  @ApiProperty({ description: "Set at timestamp" })
-  @Expose()
-  @IsDate()
-  @Type(() => Date)
-  setAt: Date;
-
-  @ApiPropertyOptional({ description: "Expired at timestamp" })
-  @Expose()
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  expiredAt?: Date;
-
-  @ApiPropertyOptional({ description: "Was this status active?" })
-  @Expose()
-  @IsOptional()
-  @IsBoolean()
-  wasActive?: boolean;
-}
-
-// -------- MAIN DTO --------
-
-/**
- * DTO for updating a user's status message.
- */
-export class UpdateStatusDto {
-  // -------- STATUS CONTENT --------
-  @ApiProperty({
-    description: "Status text message",
-    example: "Working on a new project",
-    maxLength: 100,
-    minLength: 1,
-  })
-  @IsString()
-  @IsNotEmpty({ message: "Status message is required" })
-  @MinLength(1, { message: "Status cannot be empty" })
-  @MaxLength(100, { message: "Status cannot exceed 100 characters" })
-  @Transform(({ value }) => value?.trim() || "")
-  status: string;
-
-  // -------- STATUS TYPE --------
-  @ApiPropertyOptional({
-    description: "Status type",
-    enum: UserStatusType,
-    default: UserStatusType.CUSTOM,
-  })
-  @IsOptional()
-  @IsEnum(UserStatusType, { message: "Invalid status type" })
-  type?: UserStatusType;
-
-  // -------- EMOJI --------
-  @ApiPropertyOptional({
-    description: "Emoji to display with the status",
-    example: "🚀",
-  })
+  @ApiPropertyOptional({ example: "🚀" })
   @IsOptional()
   @IsString()
   @MaxLength(10)
   @Transform(({ value }) => value?.trim() || null)
   emoji?: string | null;
 
-  // -------- COLOR --------
-  @ApiPropertyOptional({
-    description: "Status color (hex code)",
-    example: "#FF6B6B",
-  })
+  @ApiPropertyOptional({ example: "#FF6B6B" })
   @IsOptional()
-  @IsHexColor({ message: "Invalid hex color format" })
+  @IsHexColor()
   @Transform(({ value }) => value?.trim() || null)
   color?: string | null;
 
-  // -------- CATEGORY --------
-  @ApiPropertyOptional({
-    description: "Status category",
-    enum: StatusCategory,
-  })
+  @ApiPropertyOptional({ enum: StatusCategory })
   @IsOptional()
   @IsEnum(StatusCategory)
   category?: StatusCategory;
 
-  // -------- EXPIRATION --------
-  @ApiPropertyOptional({
-    description: "Status expiration time (ISO 8601 datetime)",
-    example: "2024-01-15T12:00:00Z",
-  })
+  @ApiPropertyOptional({ example: "2024-01-15T12:00:00Z" })
   @IsOptional()
-  @IsDateString(
-    {},
-    { message: "Invalid expiration date format (use ISO 8601)" },
-  )
+  @IsDateString()
   expiresAt?: string;
 
   @ApiPropertyOptional({
-    description: "Status expiry action",
     enum: StatusExpiryAction,
     default: StatusExpiryAction.CLEAR,
   })
@@ -308,9 +180,6 @@ export class UpdateStatusDto {
   @IsEnum(StatusExpiryAction)
   expiryAction?: StatusExpiryAction;
 
-  @ApiPropertyOptional({
-    description: "If expiryAction is REPLACE, the status to replace with",
-  })
   @ValidateIf((o) => o.expiryAction === StatusExpiryAction.REPLACE)
   @IsOptional()
   @IsString()
@@ -318,78 +187,49 @@ export class UpdateStatusDto {
   @Transform(({ value }) => value?.trim() || null)
   replacementStatus?: string | null;
 
-  // -------- VISIBILITY --------
-  @ApiPropertyOptional({
-    description: "Status visibility settings",
-    type: StatusVisibilityDto,
-  })
+  @ApiPropertyOptional({ type: StatusVisibilityDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StatusVisibilityDto)
   visibility?: StatusVisibilityDto;
 
-  // -------- SCHEDULING --------
-  @ApiPropertyOptional({
-    description: "Status scheduling information",
-    type: StatusScheduleDto,
-  })
+  @ApiPropertyOptional({ type: StatusScheduleDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StatusScheduleDto)
   schedule?: StatusScheduleDto;
 
-  // -------- RICH METADATA --------
-  @ApiPropertyOptional({
-    description: "Additional metadata for the status",
-    example: { location: "Office", mood: "productive" },
-  })
+  @ApiPropertyOptional({ example: { location: "Office", mood: "productive" } })
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any> | null;
 
-  // -------- CONFIRMATION (for critical status changes) --------
-  @ApiPropertyOptional({
-    description: "Confirmation flag for status changes (e.g., setting DND)",
-    example: true,
-  })
+  @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()
   confirm?: boolean;
 
-  // -------- CLEAR STATUS --------
-  @ApiPropertyOptional({
-    description: "Clear the current status (set to default)",
-    example: false,
-  })
+  @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
   clear?: boolean;
 
-  // -------- REPLACE ALL --------
-  @ApiPropertyOptional({
-    description: "Replace all previous statuses with this one",
-    example: false,
-  })
+  @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
   replaceAll?: boolean;
 
-  // -------- FLAGS --------
   @Exclude({ toPlainOnly: true })
   _isTest: boolean = false;
 
-  // -------- CONSTRUCTOR --------
   constructor(partial: Partial<UpdateStatusDto> = {}) {
     Object.assign(this, partial);
     this.sanitize();
   }
 
-  // -------- SANITIZATION --------
   private sanitize(): void {
     if (this.status) {
-      this.status = this.status.trim();
-      // Remove multiple spaces
-      this.status = this.status.replace(/\s+/g, " ");
+      this.status = this.status.trim().replace(/\s+/g, " ");
     }
     if (this.emoji) {
       this.emoji = this.emoji.trim();
@@ -399,37 +239,20 @@ export class UpdateStatusDto {
     }
   }
 
-  // -------- VALIDATION HELPERS --------
-
-  /**
-   * Check if the status is valid.
-   */
   isValid(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-
     if (this.clear && !this.status) {
-      // If clear is true, status is not required
-      // but we should still allow it
     } else if (!this.status && !this.clear) {
       errors.push("Status message is required unless clearing");
     }
-
-    if (this.status && this.status.length > 100) {
+    if (this.status && this.status.length > 100)
       errors.push("Status cannot exceed 100 characters");
-    }
-
-    if (this.emoji && this.emoji.length > 10) {
+    if (this.emoji && this.emoji.length > 10)
       errors.push("Emoji cannot exceed 10 characters");
-    }
-
-    if (this.color && !this.isValidHexColor(this.color)) {
-      errors.push("Invalid hex color format (use #RRGGBB or #RGB)");
-    }
-
-    if (this.expiresAt && this.schedule?.endAt) {
+    if (this.color && !this.isValidHexColor(this.color))
+      errors.push("Invalid hex color format");
+    if (this.expiresAt && this.schedule?.endAt)
       errors.push("Cannot specify both expiresAt and schedule.endAt");
-    }
-
     if (
       this.expiryAction === StatusExpiryAction.REPLACE &&
       !this.replacementStatus
@@ -438,100 +261,59 @@ export class UpdateStatusDto {
         "Replacement status is required when expiryAction is REPLACE",
       );
     }
-
     if (
       this.expiryAction === StatusExpiryAction.REVERT &&
       !this.revertToStatus
     ) {
       errors.push("Revert status is required when expiryAction is REVERT");
     }
-
     if (this.schedule && this.schedule.startAt && this.schedule.endAt) {
       const start = new Date(this.schedule.startAt);
       const end = new Date(this.schedule.endAt);
-      if (start >= end) {
+      if (start >= end)
         errors.push("Scheduled start time must be before end time");
-      }
     }
-
     if (this.schedule && this.schedule.recurrence) {
-      // Basic validation for RRULE
-      if (!this.schedule.recurrence.includes("FREQ=")) {
-        errors.push("Invalid recurrence rule format (must contain FREQ=)");
-      }
+      if (!this.schedule.recurrence.includes("FREQ="))
+        errors.push("Invalid recurrence rule format");
     }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return { valid: errors.length === 0, errors };
   }
 
-  /**
-   * Check if hex color is valid.
-   */
   private isValidHexColor(color: string): boolean {
     return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
   }
 
-  /**
-   * Check if the status should be cleared.
-   */
   isClear(): boolean {
     return this.clear === true;
   }
 
-  /**
-   * Check if the status has an expiration.
-   */
   hasExpiration(): boolean {
     return !!this.expiresAt || !!this.schedule?.endAt;
   }
 
-  /**
-   * Get the expiration timestamp.
-   */
   getExpiration(): Date | null {
-    if (this.expiresAt) {
-      return new Date(this.expiresAt);
-    }
-    if (this.schedule?.endAt) {
-      return new Date(this.schedule.endAt);
-    }
+    if (this.expiresAt) return new Date(this.expiresAt);
+    if (this.schedule?.endAt) return new Date(this.schedule.endAt);
     return null;
   }
 
-  /**
-   * Check if the status is scheduled for the future.
-   */
   isScheduled(): boolean {
     if (!this.schedule?.startAt) return false;
-    const start = new Date(this.schedule.startAt);
-    return start > new Date();
+    return new Date(this.schedule.startAt) > new Date();
   }
 
-  /**
-   * Get the status type, falling back to CUSTOM if not specified.
-   */
   getStatusType(): UserStatusType {
     return this.type || UserStatusType.CUSTOM;
   }
 
-  /**
-   * Get the effective status text (with emoji prefix if present).
-   */
   getFullStatus(): string {
     let full = "";
-    if (this.emoji) {
-      full += this.emoji + " ";
-    }
+    if (this.emoji) full += this.emoji + " ";
     full += this.status || "";
     return full.trim();
   }
 
-  /**
-   * Get a human-readable status summary.
-   */
   getSummary(): string {
     const parts: string[] = [];
     if (this.emoji) parts.push(this.emoji);
@@ -542,9 +324,6 @@ export class UpdateStatusDto {
     return parts.join(" ");
   }
 
-  /**
-   * Check if this status is a DND or busy status.
-   */
   isDndOrBusy(): boolean {
     return (
       this.type === UserStatusType.DO_NOT_DISTURB ||
@@ -553,22 +332,14 @@ export class UpdateStatusDto {
     );
   }
 
-  /**
-   * Check if this status should trigger notifications.
-   */
   shouldNotify(): boolean {
     if (this.type === UserStatusType.DO_NOT_DISTURB) return false;
     if (this.type === UserStatusType.SLEEPING) return false;
     return true;
   }
 
-  /**
-   * Get the status category default if not provided.
-   */
   getCategory(): StatusCategory {
     if (this.category) return this.category;
-
-    // Infer category from type
     switch (this.type) {
       case UserStatusType.WORKING:
       case UserStatusType.IN_A_MEETING:
@@ -587,21 +358,12 @@ export class UpdateStatusDto {
     }
   }
 
-  /**
-   * Get the expiry action default.
-   */
   getExpiryAction(): StatusExpiryAction {
     return this.expiryAction || StatusExpiryAction.CLEAR;
   }
 
-  // -------- TRANSFORMATION HELPERS --------
-
-  /**
-   * Convert the DTO to a plain object for database update.
-   */
   toPrismaUpdate(): Record<string, any> {
     const update: Record<string, any> = {};
-
     if (this.clear) {
       update.status = null;
       update.emoji = null;
@@ -616,7 +378,6 @@ export class UpdateStatusDto {
       update.emoji = this.emoji || null;
       update.color = this.color || null;
       update.category = this.category || this.getCategory();
-
       if (this.expiresAt) {
         update.expiresAt = new Date(this.expiresAt);
       } else if (this.schedule?.endAt) {
@@ -624,31 +385,20 @@ export class UpdateStatusDto {
       } else {
         update.expiresAt = null;
       }
-
       update.metadata = this.metadata || null;
     }
-
-    // Visibility settings as JSON
     if (this.visibility) {
       update.visibility = this.visibility;
     }
-
-    // Schedule settings as JSON
     if (this.schedule) {
       update.schedule = this.schedule;
     }
-
-    // Replacement status for expiry
     if (this.replacementStatus) {
       update.replacementStatus = this.replacementStatus;
     }
-
     return update;
   }
 
-  /**
-   * Convert the DTO to a plain object for API response.
-   */
   toResponse(): Partial<UpdateStatusDto> {
     return {
       status: this.status,
@@ -666,20 +416,10 @@ export class UpdateStatusDto {
     };
   }
 
-  /**
-   * Create a default status DTO (for clearing status).
-   */
   static createClearStatus(): UpdateStatusDto {
-    const dto = new UpdateStatusDto({
-      status: "",
-      clear: true,
-    });
-    return dto;
+    return new UpdateStatusDto({ status: "", clear: true });
   }
 
-  /**
-   * Create a status DTO for online status.
-   */
   static createOnlineStatus(
     message: string = "Online",
     emoji: string = "🟢",
@@ -693,9 +433,6 @@ export class UpdateStatusDto {
     });
   }
 
-  /**
-   * Create a status DTO for busy/DND.
-   */
   static createDndStatus(
     message: string = "Do Not Disturb",
     emoji: string = "🔴",
@@ -709,9 +446,6 @@ export class UpdateStatusDto {
     });
   }
 
-  /**
-   * Create a status DTO for away.
-   */
   static createAwayStatus(
     message: string = "Away",
     emoji: string = "🟡",
@@ -725,15 +459,11 @@ export class UpdateStatusDto {
     });
   }
 
-  /**
-   * Create a test status DTO.
-   */
   static createTestStatus(
     overrides: Partial<UpdateStatusDto> = {},
   ): UpdateStatusDto {
     const now = new Date();
     const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-
     return new UpdateStatusDto({
       status: "Test status message",
       type: UserStatusType.CUSTOM,
@@ -747,16 +477,13 @@ export class UpdateStatusDto {
     });
   }
 
-  /**
-   * Create a scheduled status DTO.
-   */
   static createScheduledStatus(
     status: string,
     startAt: Date,
     endAt: Date,
     overrides: Partial<UpdateStatusDto> = {},
   ): UpdateStatusDto {
-    const dto = new UpdateStatusDto({
+    return new UpdateStatusDto({
       status,
       type: UserStatusType.CUSTOM,
       schedule: {
@@ -766,24 +493,15 @@ export class UpdateStatusDto {
       },
       ...overrides,
     });
-    return dto;
   }
 
-  /**
-   * Create a DTO from a plain object.
-   */
   static fromPlain(obj: any): UpdateStatusDto {
     return plainToClass(UpdateStatusDto, obj, {
       enableImplicitConversion: true,
     });
   }
 
-  // -------- HISTORY MANAGEMENT --------
-
-  /**
-   * Generate a history entry from this status.
-   */
-  toHistoryEntry(): Partial<StatusHistoryEntryDto> {
+  toHistoryEntry(): Partial<any> {
     return {
       status: this.status || "",
       type: this.type || UserStatusType.CUSTOM,
@@ -793,29 +511,18 @@ export class UpdateStatusDto {
     };
   }
 
-  /**
-   * Validate that the status message does not contain prohibited words.
-   * (Simple implementation)
-   */
   validateContent(prohibitedWords: string[] = []): {
     valid: boolean;
     errors: string[];
   } {
     const errors: string[] = [];
     if (!this.status) return { valid: true, errors: [] };
-
     const lowerStatus = this.status.toLowerCase();
     for (const word of prohibitedWords) {
       if (lowerStatus.includes(word.toLowerCase())) {
         errors.push(`Status contains prohibited word: "${word}"`);
       }
     }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return { valid: errors.length === 0, errors };
   }
-
-  // -------- END --------
 }
