@@ -17,17 +17,9 @@ import {
   IsNotEmpty,
   IsIn,
 } from "class-validator";
-import {
-  Expose,
-  Exclude,
-  Transform,
-  Type,
-  plainToClass,
-} from "class-transformer";
+import { Expose, Type, plainToClass } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserRole } from "../../../common/constants/roles";
-
-// -------- ENUMS --------
 
 export enum UserStatus {
   ONLINE = "online",
@@ -72,116 +64,84 @@ export enum ProfileCompletenessLevel {
   FULL = "full",
 }
 
-// -------- NESTED RESPONSE DTOs --------
-
-/**
- * Profile response DTO.
- */
 export class UserProfileResponseDto {
-  @ApiProperty({ description: "Profile ID", example: "prof_abc123" })
+  @ApiProperty({ description: "Profile ID" })
   @Expose()
   @IsUUID()
   id: string;
 
-  @ApiProperty({ description: "User ID", example: "user_abc123" })
+  @ApiProperty({ description: "User ID" })
   @Expose()
   @IsUUID()
   userId: string;
 
-  @ApiPropertyOptional({
-    description: "User bio",
-    example: "Hello! I am using Real WhatsApp Clone.",
-  })
+  @ApiPropertyOptional({ description: "User bio" })
   @Expose()
   @IsOptional()
   @IsString()
   bio: string | null;
 
-  @ApiPropertyOptional({
-    description: "User status message",
-    example: "Available",
-  })
+  @ApiPropertyOptional({ description: "User status message" })
   @Expose()
   @IsOptional()
   @IsString()
   status: string | null;
 
-  @ApiPropertyOptional({
-    description: "Avatar URL",
-    example: "https://storage.example.com/avatars/user123.jpg",
-  })
+  @ApiPropertyOptional({ description: "Avatar URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   avatarUrl: string | null;
 
-  @ApiPropertyOptional({
-    description: "Avatar thumbnail URL",
-    example: "https://storage.example.com/avatars/user123_thumb.jpg",
-  })
+  @ApiPropertyOptional({ description: "Avatar thumbnail URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   avatarThumb: string | null;
 
-  @ApiPropertyOptional({
-    description: "Cover photo URL",
-    example: "https://storage.example.com/covers/user123.jpg",
-  })
+  @ApiPropertyOptional({ description: "Cover photo URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   coverPhoto: string | null;
 
-  @ApiPropertyOptional({
-    description: "Cover photo thumbnail URL",
-    example: "https://storage.example.com/covers/user123_thumb.jpg",
-  })
+  @ApiPropertyOptional({ description: "Cover photo thumbnail URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   coverPhotoThumb: string | null;
 
-  @ApiPropertyOptional({
-    description: "User location",
-    example: "New York, USA",
-  })
+  @ApiPropertyOptional({ description: "User location" })
   @Expose()
   @IsOptional()
   @IsString()
   location: string | null;
 
-  @ApiPropertyOptional({ description: "Latitude", example: 40.7128 })
+  @ApiPropertyOptional({ description: "Latitude" })
   @Expose()
   @IsOptional()
   @IsNumber()
   latitude: number | null;
 
-  @ApiPropertyOptional({ description: "Longitude", example: -74.006 })
+  @ApiPropertyOptional({ description: "Longitude" })
   @Expose()
   @IsOptional()
   @IsNumber()
   longitude: number | null;
 
-  @ApiPropertyOptional({
-    description: "Website URL",
-    example: "https://example.com",
-  })
+  @ApiPropertyOptional({ description: "Website URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   website: string | null;
 
-  @ApiPropertyOptional({
-    description: "Business email",
-    example: "business@example.com",
-  })
+  @ApiPropertyOptional({ description: "Business email" })
   @Expose()
   @IsOptional()
   @IsEmail()
   businessEmail: string | null;
 
-  @ApiPropertyOptional({ description: "Birthday", example: "1990-01-01" })
+  @ApiPropertyOptional({ description: "Birthday" })
   @Expose()
   @IsOptional()
   @IsDate()
@@ -203,25 +163,25 @@ export class UserProfileResponseDto {
   @IsEnum(RelationshipStatus)
   relationshipStatus: RelationshipStatus | null;
 
-  @ApiPropertyOptional({ description: "Language preference", example: "en" })
+  @ApiPropertyOptional({ description: "Language preference" })
   @Expose()
   @IsOptional()
   @IsString()
   language: string | null;
 
-  @ApiPropertyOptional({ description: "Timezone", example: "America/New_York" })
+  @ApiPropertyOptional({ description: "Timezone" })
   @Expose()
   @IsOptional()
   @IsString()
   timezone: string | null;
 
-  @ApiPropertyOptional({ description: "Country code", example: "US" })
+  @ApiPropertyOptional({ description: "Country code" })
   @Expose()
   @IsOptional()
   @IsString()
   countryCode: string | null;
 
-  @ApiPropertyOptional({ description: "Region/State", example: "New York" })
+  @ApiPropertyOptional({ description: "Region/State" })
   @Expose()
   @IsOptional()
   @IsString()
@@ -245,10 +205,7 @@ export class UserProfileResponseDto {
   @IsObject()
   interests: Record<string, any> | null;
 
-  @ApiPropertyOptional({
-    description: "Profile completeness score",
-    example: 75,
-  })
+  @ApiPropertyOptional({ description: "Profile completeness score" })
   @Expose()
   @IsOptional()
   @IsInt()
@@ -263,26 +220,26 @@ export class UserProfileResponseDto {
   @IsEnum(ProfileCompletenessLevel)
   completenessLevel: ProfileCompletenessLevel;
 
-  @ApiProperty({ description: "Created at timestamp" })
+  @ApiProperty({ description: "Created at" })
   @Expose()
   @IsDate()
   @Type(() => Date)
   createdAt: Date;
 
-  @ApiProperty({ description: "Updated at timestamp" })
+  @ApiProperty({ description: "Updated at" })
   @Expose()
   @IsDate()
   @Type(() => Date)
   updatedAt: Date;
 
-  @ApiPropertyOptional({ description: "Avatar updated at timestamp" })
+  @ApiPropertyOptional({ description: "Avatar updated at" })
   @Expose()
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   avatarUpdatedAt: Date | null;
 
-  @ApiPropertyOptional({ description: "Cover photo updated at timestamp" })
+  @ApiPropertyOptional({ description: "Cover photo updated at" })
   @Expose()
   @IsOptional()
   @IsDate()
@@ -290,54 +247,48 @@ export class UserProfileResponseDto {
   coverPhotoUpdatedAt: Date | null;
 }
 
-/**
- * Notification settings response DTO.
- */
 export class NotificationSettingsResponseDto {
-  @ApiProperty({ description: "Message notifications enabled", example: true })
+  @ApiProperty({ description: "Message notifications enabled" })
   @Expose()
   @IsBoolean()
   messages: boolean;
 
-  @ApiProperty({ description: "Group notifications enabled", example: true })
+  @ApiProperty({ description: "Group notifications enabled" })
   @Expose()
   @IsBoolean()
   groups: boolean;
 
-  @ApiProperty({ description: "Call notifications enabled", example: true })
+  @ApiProperty({ description: "Call notifications enabled" })
   @Expose()
   @IsBoolean()
   calls: boolean;
 
-  @ApiProperty({ description: "Mention notifications enabled", example: true })
+  @ApiProperty({ description: "Mention notifications enabled" })
   @Expose()
   @IsBoolean()
   mentions: boolean;
 
-  @ApiProperty({ description: "Reaction notifications enabled", example: true })
+  @ApiProperty({ description: "Reaction notifications enabled" })
   @Expose()
   @IsBoolean()
   reactions: boolean;
 
-  @ApiProperty({ description: "Notification sounds enabled", example: true })
+  @ApiProperty({ description: "Notification sounds enabled" })
   @Expose()
   @IsBoolean()
   sounds: boolean;
 
-  @ApiProperty({ description: "Vibrations enabled", example: true })
+  @ApiProperty({ description: "Vibrations enabled" })
   @Expose()
   @IsBoolean()
   vibrations: boolean;
 
-  @ApiProperty({ description: "Push notifications enabled", example: true })
+  @ApiProperty({ description: "Push notifications enabled" })
   @Expose()
   @IsBoolean()
   pushEnabled: boolean;
 }
 
-/**
- * Privacy settings response DTO.
- */
 export class PrivacySettingsResponseDto {
   @ApiProperty({
     description: "Last seen visibility",
@@ -363,39 +314,30 @@ export class PrivacySettingsResponseDto {
   @IsIn(["everyone", "contacts", "none"])
   status: "everyone" | "contacts" | "none";
 
-  @ApiProperty({ description: "Read receipts enabled", example: true })
+  @ApiProperty({ description: "Read receipts enabled" })
   @Expose()
   @IsBoolean()
   readReceipts: boolean;
 
-  @ApiProperty({ description: "Typing indicators enabled", example: true })
+  @ApiProperty({ description: "Typing indicators enabled" })
   @Expose()
   @IsBoolean()
   typingIndicators: boolean;
 
-  @ApiProperty({ description: "Online status visible", example: true })
+  @ApiProperty({ description: "Online status visible" })
   @Expose()
   @IsBoolean()
   onlineStatus: boolean;
 }
 
-/**
- * Settings response DTO.
- */
 export class UserSettingsResponseDto {
-  @ApiProperty({
-    description: "Notification settings",
-    type: NotificationSettingsResponseDto,
-  })
+  @ApiProperty({ type: NotificationSettingsResponseDto })
   @Expose()
   @ValidateNested()
   @Type(() => NotificationSettingsResponseDto)
   notifications: NotificationSettingsResponseDto;
 
-  @ApiProperty({
-    description: "Privacy settings",
-    type: PrivacySettingsResponseDto,
-  })
+  @ApiProperty({ type: PrivacySettingsResponseDto })
   @Expose()
   @ValidateNested()
   @Type(() => PrivacySettingsResponseDto)
@@ -409,12 +351,12 @@ export class UserSettingsResponseDto {
   @IsIn(["light", "dark", "system"])
   theme: "light" | "dark" | "system";
 
-  @ApiProperty({ description: "Language preference", example: "en" })
+  @ApiProperty({ description: "Language preference" })
   @Expose()
   @IsString()
   language: string;
 
-  @ApiProperty({ description: "Timezone", example: "America/New_York" })
+  @ApiProperty({ description: "Timezone" })
   @Expose()
   @IsString()
   timezone: string;
@@ -434,179 +376,136 @@ export class UserSettingsResponseDto {
   chatBackground: string | null;
 }
 
-/**
- * User statistics response DTO.
- */
 export class UserStatsResponseDto {
-  @ApiProperty({ description: "Total messages sent", example: 1250 })
+  @ApiProperty({ description: "Total messages sent" })
   @Expose()
   @IsInt()
   totalMessages: number;
 
-  @ApiProperty({ description: "Total messages received", example: 980 })
+  @ApiProperty({ description: "Total messages received" })
   @Expose()
   @IsInt()
   totalMessagesReceived: number;
 
-  @ApiProperty({ description: "Total groups joined", example: 15 })
+  @ApiProperty({ description: "Total groups joined" })
   @Expose()
   @IsInt()
   totalGroups: number;
 
-  @ApiProperty({ description: "Total contacts", example: 42 })
+  @ApiProperty({ description: "Total contacts" })
   @Expose()
   @IsInt()
   totalContacts: number;
 
-  @ApiProperty({ description: "Total files uploaded", example: 87 })
+  @ApiProperty({ description: "Total files uploaded" })
   @Expose()
   @IsInt()
   totalFiles: number;
 
-  @ApiProperty({ description: "Total calls made", example: 56 })
+  @ApiProperty({ description: "Total calls made" })
   @Expose()
   @IsInt()
   totalCalls: number;
 
-  @ApiProperty({ description: "Total calls received", example: 63 })
+  @ApiProperty({ description: "Total calls received" })
   @Expose()
   @IsInt()
   totalCallsReceived: number;
 
-  @ApiProperty({ description: "Total calls missed", example: 12 })
+  @ApiProperty({ description: "Total calls missed" })
   @Expose()
   @IsInt()
   totalCallsMissed: number;
 
-  @ApiProperty({ description: "Account age in days", example: 365 })
+  @ApiProperty({ description: "Account age in days" })
   @Expose()
   @IsInt()
   accountAgeDays: number;
 
-  @ApiPropertyOptional({
-    description: "Last active timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiPropertyOptional({ description: "Last active timestamp" })
   @Expose()
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   lastActive: Date | null;
 
-  @ApiPropertyOptional({
-    description: "Average messages per day",
-    example: 3.42,
-  })
+  @ApiPropertyOptional({ description: "Average messages per day" })
   @Expose()
   @IsOptional()
   @IsNumber()
   avgMessagesPerDay: number | null;
 
-  @ApiPropertyOptional({
-    description: "Message streak (consecutive days)",
-    example: 45,
-  })
+  @ApiPropertyOptional({ description: "Message streak (consecutive days)" })
   @Expose()
   @IsOptional()
   @IsInt()
   messageStreak: number | null;
 }
 
-// -------- MAIN RESPONSE DTO --------
-
-/**
- * User response DTO for API responses.
- * Supports different serialization groups for different contexts.
- */
 export class UserResponseDto {
-  // -------- PRIMARY IDENTIFIERS --------
-  @ApiProperty({ description: "User ID", example: "user_abc123" })
+  @ApiProperty({ description: "User ID" })
   @Expose()
   @IsUUID()
   id: string;
 
-  // -------- AUTHENTICATION --------
-  @ApiProperty({
-    description: "User email address",
-    example: "john.doe@example.com",
-  })
+  @ApiProperty({ description: "User email address" })
   @Expose()
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({
-    description: "User phone number",
-    example: "+15551234567",
-  })
+  @ApiPropertyOptional({ description: "User phone number" })
   @Expose()
   @IsOptional()
   @IsPhoneNumber()
   phone: string | null;
 
-  // -------- PROFILE --------
-  @ApiProperty({ description: "Display name", example: "John Doe" })
+  @ApiProperty({ description: "Display name" })
   @Expose()
   @IsString()
   @IsNotEmpty()
   displayName: string;
 
-  @ApiPropertyOptional({
-    description: "User bio",
-    example: "Hello! I am using Real WhatsApp Clone.",
-  })
+  @ApiPropertyOptional({ description: "User bio" })
   @Expose()
   @IsOptional()
   @IsString()
   bio: string | null;
 
-  @ApiPropertyOptional({
-    description: "User status message",
-    example: "Available",
-  })
+  @ApiPropertyOptional({ description: "User status message" })
   @Expose()
   @IsOptional()
   @IsString()
   status: string | null;
 
-  @ApiPropertyOptional({
-    description: "Avatar URL",
-    example: "https://storage.example.com/avatars/user123.jpg",
-  })
+  @ApiPropertyOptional({ description: "Avatar URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   avatarUrl: string | null;
 
-  @ApiPropertyOptional({
-    description: "Avatar thumbnail URL",
-    example: "https://storage.example.com/avatars/user123_thumb.jpg",
-  })
+  @ApiPropertyOptional({ description: "Avatar thumbnail URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   avatarThumb: string | null;
 
-  @ApiPropertyOptional({
-    description: "Cover photo URL",
-    example: "https://storage.example.com/covers/user123.jpg",
-  })
+  @ApiPropertyOptional({ description: "Cover photo URL" })
   @Expose()
   @IsOptional()
   @IsUrl()
   coverPhoto: string | null;
 
-  // -------- ACCOUNT STATUS --------
-  @ApiProperty({ description: "Account is active", example: true })
+  @ApiProperty({ description: "Account is active" })
   @Expose()
   @IsBoolean()
   isActive: boolean;
 
-  @ApiProperty({ description: "Email is verified", example: true })
+  @ApiProperty({ description: "Email is verified" })
   @Expose()
   @IsBoolean()
   isVerified: boolean;
 
-  @ApiProperty({ description: "User has admin privileges", example: false })
+  @ApiProperty({ description: "User has admin privileges" })
   @Expose()
   @IsBoolean()
   isAdmin: boolean;
@@ -616,130 +515,91 @@ export class UserResponseDto {
   @IsEnum(AccountStatus)
   accountStatus: AccountStatus;
 
-  @ApiPropertyOptional({
-    description: "Suspension reason",
-    example: "Terms of service violation",
-  })
+  @ApiPropertyOptional({ description: "Suspension reason" })
   @Expose()
   @IsOptional()
   @IsString()
   suspendedReason: string | null;
 
-  @ApiPropertyOptional({
-    description: "Suspended at timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiPropertyOptional({ description: "Suspended at timestamp" })
   @Expose()
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   suspendedAt: Date | null;
 
-  // -------- ROLES & PERMISSIONS --------
   @ApiProperty({ description: "User roles", enum: UserRole, isArray: true })
   @Expose()
   @IsArray()
   @IsEnum(UserRole, { each: true })
   roles: UserRole[];
 
-  @ApiProperty({
-    description: "User permissions",
-    example: ["user:read", "message:send"],
-    isArray: true,
-  })
+  @ApiProperty({ description: "User permissions", isArray: true })
   @Expose()
   @IsArray()
   @IsString({ each: true })
   permissions: string[];
 
-  // -------- TIMESTAMPS --------
-  @ApiProperty({
-    description: "Account created at timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiProperty({ description: "Account created at" })
   @Expose()
   @IsDate()
   @Type(() => Date)
   createdAt: Date;
 
-  @ApiProperty({
-    description: "Account updated at timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiProperty({ description: "Account updated at" })
   @Expose()
   @IsDate()
   @Type(() => Date)
   updatedAt: Date;
 
-  @ApiPropertyOptional({
-    description: "Last seen timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiPropertyOptional({ description: "Last seen timestamp" })
   @Expose()
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   lastSeen: Date | null;
 
-  @ApiPropertyOptional({
-    description: "Last active timestamp",
-    example: "2024-01-15T10:30:00Z",
-  })
+  @ApiPropertyOptional({ description: "Last active timestamp" })
   @Expose()
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   lastActive: Date | null;
 
-  // -------- 2FA --------
-  @ApiProperty({
-    description: "Two-factor authentication enabled",
-    example: false,
-  })
+  @ApiProperty({ description: "Two-factor authentication enabled" })
   @Expose()
   @IsBoolean()
   is2faEnabled: boolean;
 
-  // -------- CALCULATED FIELDS --------
-  @ApiProperty({ description: "User is currently online", example: true })
+  @ApiProperty({ description: "User is currently online" })
   @Expose()
   @IsBoolean()
   isOnline: boolean;
 
-  @ApiPropertyOptional({
-    description: "Last seen formatted",
-    example: "2 minutes ago",
-  })
+  @ApiPropertyOptional({ description: "Last seen formatted" })
   @Expose()
   @IsOptional()
   @IsString()
   lastSeenFormatted: string | null;
 
-  @ApiPropertyOptional({ description: "User age in years", example: 34 })
+  @ApiPropertyOptional({ description: "User age in years" })
   @Expose()
   @IsOptional()
   @IsNumber()
   age: number | null;
 
-  @ApiPropertyOptional({
-    description: "User age formatted",
-    example: "34 years 6 months",
-  })
+  @ApiPropertyOptional({ description: "User age formatted" })
   @Expose()
   @IsOptional()
   @IsString()
   ageFormatted: string | null;
 
-  @ApiPropertyOptional({
-    description: "User initials for avatar fallback",
-    example: "JD",
-  })
+  @ApiPropertyOptional({ description: "User initials for avatar fallback" })
   @Expose()
   @IsOptional()
   @IsString()
   initials: string | null;
 
-  // -------- NESTED OBJECTS --------
   @ApiPropertyOptional({
     description: "User profile",
     type: UserProfileResponseDto,
@@ -770,44 +630,80 @@ export class UserResponseDto {
   @Type(() => UserStatsResponseDto)
   stats: UserStatsResponseDto | null;
 
-  // -------- EXCLUDED FIELDS (not exposed) --------
-  @Exclude()
-  passwordHash: string;
-
-  @Exclude()
-  twoFactorSecret: string;
-
-  @Exclude()
-  deletedAt: Date | null;
-
-  @Exclude()
-  metadata: Record<string, any> | null;
-
-  @Exclude()
-  userAgent: string | null;
-
-  @Exclude()
-  ipAddress: string | null;
-
-  @Exclude()
-  deviceId: string | null;
-
-  @Exclude()
-  sessionId: string | null;
-
-  // -------- CONSTRUCTOR --------
   constructor(partial: Partial<UserResponseDto> = {}) {
     Object.assign(this, partial);
   }
 
-  // -------- TRANSFORMATION HELPERS --------
+  static calculateIsOnline(lastSeen: Date | null): boolean {
+    if (!lastSeen) return false;
+    const now = new Date();
+    const diff = now.getTime() - lastSeen.getTime();
+    return diff < 5 * 60 * 1000;
+  }
 
-  /**
-   * Create a UserResponseDto from a User entity.
-   * @param user - User entity object
-   * @param options - Serialization options
-   * @returns UserResponseDto
-   */
+  static formatLastSeen(lastSeen: Date | null): string | null {
+    if (!lastSeen) return null;
+    const now = new Date();
+    const diff = now.getTime() - lastSeen.getTime();
+    if (diff < 60 * 1000) return "Just now";
+    if (diff < 60 * 60 * 1000) {
+      const minutes = Math.floor(diff / (60 * 1000));
+      return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    }
+    if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    }
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    }
+    return lastSeen.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  static calculateAge(birthday: Date | null): number | null {
+    if (!birthday) return null;
+    const now = new Date();
+    const diff = now.getTime() - birthday.getTime();
+    const ageDate = new Date(diff);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  }
+
+  static formatAge(birthday: Date | null): string | null {
+    if (!birthday) return null;
+    const now = new Date();
+    const months =
+      (now.getFullYear() - birthday.getFullYear()) * 12 +
+      (now.getMonth() - birthday.getMonth());
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    if (years === 0) {
+      return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
+    }
+    const yearStr = `${years} year${years !== 1 ? "s" : ""}`;
+    if (remainingMonths === 0) {
+      return yearStr;
+    }
+    return `${yearStr} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
+  }
+
+  static getInitials(displayName: string): string {
+    if (!displayName) return "U";
+    const parts = displayName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return (
+      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
+    ).toUpperCase();
+  }
+
   static fromEntity(
     user: any,
     options: {
@@ -827,8 +723,6 @@ export class UserResponseDto {
     } = options;
 
     const dto = new UserResponseDto();
-
-    // Basic fields
     dto.id = user.id;
     dto.email = user.email;
     dto.phone = user.phone || null;
@@ -852,12 +746,10 @@ export class UserResponseDto {
     dto.lastActive = user.lastActive || null;
     dto.is2faEnabled = user.is2faEnabled || false;
 
-    // Deleted fields (only if requested)
     if (includeDeleted) {
       dto.deletedAt = user.deletedAt || null;
     }
 
-    // Sensitive fields (only if requested and allowed)
     if (includeSensitive) {
       (dto as any).metadata = user.metadata || null;
       (dto as any).userAgent = user.userAgent || null;
@@ -866,14 +758,12 @@ export class UserResponseDto {
       (dto as any).sessionId = user.sessionId || null;
     }
 
-    // Calculated fields
     dto.isOnline = UserResponseDto.calculateIsOnline(user.lastSeen);
     dto.lastSeenFormatted = UserResponseDto.formatLastSeen(user.lastSeen);
     dto.age = UserResponseDto.calculateAge(user.birthday);
     dto.ageFormatted = UserResponseDto.formatAge(user.birthday);
     dto.initials = UserResponseDto.getInitials(user.displayName);
 
-    // Profile (nested)
     if (includeProfile && user.profile) {
       dto.profile = new UserProfileResponseDto();
       const profile = user.profile;
@@ -909,12 +799,9 @@ export class UserResponseDto {
       dto.profile.coverPhotoUpdatedAt = profile.coverPhotoUpdatedAt || null;
     }
 
-    // Settings (nested)
     if (includeSettings && user.settings) {
       dto.settings = new UserSettingsResponseDto();
       const settings = user.settings;
-
-      // Notifications
       dto.settings.notifications = {
         messages: settings.notifications?.messages ?? true,
         groups: settings.notifications?.groups ?? true,
@@ -925,8 +812,6 @@ export class UserResponseDto {
         vibrations: settings.notifications?.vibrations ?? true,
         pushEnabled: settings.notifications?.pushEnabled ?? true,
       };
-
-      // Privacy
       dto.settings.privacy = {
         lastSeen: settings.privacy?.lastSeen || "everyone",
         profilePhoto: settings.privacy?.profilePhoto || "everyone",
@@ -935,7 +820,6 @@ export class UserResponseDto {
         typingIndicators: settings.privacy?.typingIndicators ?? true,
         onlineStatus: settings.privacy?.onlineStatus ?? true,
       };
-
       dto.settings.theme = settings.theme || "system";
       dto.settings.language = settings.language || "en";
       dto.settings.timezone = settings.timezone || "UTC";
@@ -943,7 +827,6 @@ export class UserResponseDto {
       dto.settings.chatBackground = settings.chatBackground || null;
     }
 
-    // Stats (if requested)
     if (includeStats) {
       dto.stats = new UserStatsResponseDto();
       dto.stats.totalMessages = user._totalMessages || 0;
@@ -959,25 +842,18 @@ export class UserResponseDto {
           (1000 * 60 * 60 * 24),
       );
       dto.stats.lastActive = user.lastActive || null;
-
-      // Calculate average messages per day
       if (dto.stats.accountAgeDays > 0 && dto.stats.totalMessages > 0) {
         dto.stats.avgMessagesPerDay =
           dto.stats.totalMessages / dto.stats.accountAgeDays;
       } else {
         dto.stats.avgMessagesPerDay = null;
       }
-
-      // Message streak (would need more data)
       dto.stats.messageStreak = null;
     }
 
     return dto;
   }
 
-  /**
-   * Create a UserResponseDto from a Prisma user object.
-   */
   static fromPrisma(
     user: any,
     options: {
@@ -990,9 +866,6 @@ export class UserResponseDto {
     return this.fromEntity(user, options);
   }
 
-  /**
-   * Create a public user response (limited fields).
-   */
   static toPublic(user: any): UserResponseDto {
     const dto = this.fromEntity(user, {
       includeProfile: true,
@@ -1000,8 +873,6 @@ export class UserResponseDto {
       includeStats: false,
       includeSensitive: false,
     });
-
-    // Hide sensitive fields
     dto.email = "";
     dto.phone = null;
     dto.isAdmin = false;
@@ -1010,13 +881,9 @@ export class UserResponseDto {
     dto.is2faEnabled = false;
     dto.suspendedReason = null;
     dto.suspendedAt = null;
-
     return dto;
   }
 
-  /**
-   * Create a contact user response (for contact lists).
-   */
   static toContact(user: any): UserResponseDto {
     const dto = this.fromEntity(user, {
       includeProfile: true,
@@ -1024,8 +891,6 @@ export class UserResponseDto {
       includeStats: false,
       includeSensitive: false,
     });
-
-    // Hide sensitive fields for contacts
     dto.email = "";
     dto.phone = null;
     dto.isAdmin = false;
@@ -1036,13 +901,9 @@ export class UserResponseDto {
     dto.suspendedAt = null;
     dto.createdAt = undefined as any;
     dto.updatedAt = undefined as any;
-
     return dto;
   }
 
-  /**
-   * Create an admin user response (full detail with sensitive data).
-   */
   static toAdmin(user: any): UserResponseDto {
     return this.fromEntity(user, {
       includeProfile: true,
@@ -1053,109 +914,6 @@ export class UserResponseDto {
     });
   }
 
-  // -------- STATIC HELPERS --------
-
-  /**
-   * Check if a user is online based on lastSeen.
-   */
-  static calculateIsOnline(lastSeen: Date | null): boolean {
-    if (!lastSeen) return false;
-    const now = new Date();
-    const diff = now.getTime() - lastSeen.getTime();
-    return diff < 5 * 60 * 1000; // 5 minutes
-  }
-
-  /**
-   * Format lastSeen as a human-readable string.
-   */
-  static formatLastSeen(lastSeen: Date | null): string | null {
-    if (!lastSeen) return null;
-
-    const now = new Date();
-    const diff = now.getTime() - lastSeen.getTime();
-
-    // Less than a minute
-    if (diff < 60 * 1000) return "Just now";
-    // Less than an hour
-    if (diff < 60 * 60 * 1000) {
-      const minutes = Math.floor(diff / (60 * 1000));
-      return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    }
-    // Less than a day
-    if (diff < 24 * 60 * 60 * 1000) {
-      const hours = Math.floor(diff / (60 * 60 * 1000));
-      return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-    }
-    // Less than a week
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-      return `${days} day${days > 1 ? "s" : ""} ago`;
-    }
-    // More than a week
-    return lastSeen.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  /**
-   * Calculate user age from birthday.
-   */
-  static calculateAge(birthday: Date | null): number | null {
-    if (!birthday) return null;
-    const now = new Date();
-    const diff = now.getTime() - birthday.getTime();
-    const ageDate = new Date(diff);
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
-  }
-
-  /**
-   * Format age as years and months.
-   */
-  static formatAge(birthday: Date | null): string | null {
-    if (!birthday) return null;
-
-    const now = new Date();
-    const months =
-      (now.getFullYear() - birthday.getFullYear()) * 12 +
-      (now.getMonth() - birthday.getMonth());
-
-    const years = Math.floor(months / 12);
-    const remainingMonths = months % 12;
-
-    if (years === 0) {
-      return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
-    }
-
-    const yearStr = `${years} year${years !== 1 ? "s" : ""}`;
-    if (remainingMonths === 0) {
-      return yearStr;
-    }
-    return `${yearStr} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`;
-  }
-
-  /**
-   * Get user initials from display name.
-   */
-  static getInitials(displayName: string): string {
-    if (!displayName) return "U";
-    const parts = displayName.trim().split(/\s+/);
-    if (parts.length === 1) {
-      return parts[0].charAt(0).toUpperCase();
-    }
-    return (
-      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
-    ).toUpperCase();
-  }
-
-  // -------- TRANSFORMATION METHODS --------
-
-  /**
-   * Convert the DTO to a plain object for API response.
-   */
   toResponse(): Partial<UserResponseDto> {
     return {
       id: this.id,
@@ -1191,9 +949,6 @@ export class UserResponseDto {
     };
   }
 
-  /**
-   * Convert to a WebSocket-friendly payload.
-   */
   toSocketPayload(): {
     id: string;
     displayName: string;
@@ -1214,9 +969,6 @@ export class UserResponseDto {
     };
   }
 
-  /**
-   * Create a test user response with default values.
-   */
   static createTestResponse(
     overrides: Partial<UserResponseDto> = {},
   ): UserResponseDto {
@@ -1250,8 +1002,6 @@ export class UserResponseDto {
       stats: new UserStatsResponseDto(),
       ...overrides,
     });
-
-    // Add test profile
     if (!overrides.profile) {
       base.profile = new UserProfileResponseDto();
       base.profile.id = "test_profile_123";
@@ -1264,46 +1014,20 @@ export class UserResponseDto {
       base.profile.completenessScore = 75;
       base.profile.completenessLevel = ProfileCompletenessLevel.COMPLETE;
     }
-
     return base;
   }
 
-  // -------- VALIDATION HELPERS --------
-
-  /**
-   * Validate that the response DTO is complete.
-   */
   validate(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-
-    if (!this.id) {
-      errors.push("User ID is required");
-    }
-
-    if (!this.email) {
-      errors.push("Email is required");
-    }
-
-    if (!this.displayName) {
-      errors.push("Display name is required");
-    }
-
-    if (this.roles && this.roles.length === 0) {
+    if (!this.id) errors.push("User ID is required");
+    if (!this.email) errors.push("Email is required");
+    if (!this.displayName) errors.push("Display name is required");
+    if (this.roles && this.roles.length === 0)
       errors.push("At least one role is required");
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return { valid: errors.length === 0, errors };
   }
 
-  /**
-   * Check if the response is for a valid user.
-   */
   isValid(): boolean {
     return this.validate().valid;
   }
-
-  // -------- END --------
 }
